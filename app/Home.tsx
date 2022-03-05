@@ -1,131 +1,127 @@
 import * as React from 'react';
-import {
-  Button,
-  Text,
-  View,
-  Alert,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import {Button, Text, View, StyleSheet} from 'react-native';
+import {Picker} from '@react-native-picker/picker';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
-import {
-  Agenda,
-  DateData,
-  AgendaSchedule,
-  AgendaEntry,
-} from 'react-native-calendars';
-
-import {RootStackParamList, styles as TemplateStyles} from './Routes';
+import {Calendar, Mode, modeToNum} from 'react-native-big-calendar';
+import {RootStackParamList} from './Routes';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import dayjs from 'dayjs';
 
 type HomeProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-function timeToString(time: number) {
-  const date = new Date(time);
-  return date.toISOString().split('T')[0];
-}
+const events = [
+  {
+    title: 'BoulderKlub',
+    start: new Date(2022, 2, 5, 6, 0),
+    end: new Date(2022, 2, 5, 9, 0),
+  },
+  {
+    title: 'Coffee break',
+    start: new Date(2020, 1, 11, 15, 45),
+    end: new Date(2020, 1, 11, 16, 30),
+  },
+];
+export const styles = StyleSheet.create({
+  container: {flex: 1},
+});
+
+const darkTheme = {
+  palette: {
+    primary: {
+      main: '#6185d0',
+      contrastText: '#000',
+    },
+    gray: {
+      '100': '#333',
+      '200': '#666',
+      '300': '#888',
+      '500': '#aaa',
+      '800': '#ccc',
+    },
+  },
+};
+
+const today = new Date();
 
 const HomeScreen = ({navigation}: HomeProps) => {
-  const [items, setItems] = React.useState<AgendaSchedule | undefined>(
-    undefined,
-  );
-
-  function loadItems(day: DateData) {
-    console.log(day);
-    const itemsCopy: any = items || {};
-
-    setTimeout(() => {
-      for (let i = -5; i < 10; i++) {
-        const time = day.timestamp + i * 24 * 60 * 60 * 1000;
-        const strTime = timeToString(time);
-
-        if (!itemsCopy[strTime]) {
-          itemsCopy[strTime] = [];
-
-          const numItems = Math.floor(Math.random() * 3 + 1);
-          for (let j = 0; j < numItems; j++) {
-            itemsCopy[strTime].push({
-              name: 'Item for ' + strTime + ' #' + j,
-              height: Math.max(50, Math.floor(Math.random() * 150)),
-              day: strTime,
-            });
-          }
-        }
-      }
-
-      const newItems: AgendaSchedule = {};
-      Object.keys(itemsCopy).forEach(key => {
-        newItems[key] = itemsCopy[key];
-      });
-      // setItems({
-      //   items: newItems,
-      // });
-    }, 1000);
-  }
-
-  const renderItem = (reservation: AgendaEntry, isFirst: boolean) => {
-    console.log('iam here');
-    const fontSize = isFirst ? 16 : 14;
-    const color = isFirst ? 'black' : '#43515c';
-
-    return (
-      <TouchableOpacity
-        style={[styles.item, {height: reservation.height}]}
-        onPress={() => Alert.alert(reservation.name)}>
-        <Text style={{fontSize, color}}>{reservation.name}</Text>
-      </TouchableOpacity>
-    );
+  const [date, setDate] = React.useState(today);
+  const [mode, setMode] = React.useState<Mode>('week');
+  const _onPrevDate = () => {
+    if (mode === 'month') {
+      setDate(
+        dayjs(date)
+          .add(dayjs(date).date() * -1, 'day')
+          .toDate(),
+      );
+    } else {
+      setDate(
+        dayjs(date)
+          .add(modeToNum(mode, date) * -1, 'day')
+          .toDate(),
+      );
+    }
   };
 
-  const renderEmptyDate = () => {
-    console.log('iam empty');
-    return (
-      <View style={styles.emptyDate}>
-        <Text>This is empty date!</Text>
-      </View>
-    );
+  const _onNextDate = () => {
+    setDate(dayjs(date).add(modeToNum(mode, date), 'day').toDate());
   };
 
-  const rowHasChanged = (r1: AgendaEntry, r2: AgendaEntry) => {
-    return r1.name !== r2.name;
+  const _onToday = () => {
+    setDate(today);
   };
-
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <>
+          <View style={{width: '50%', marginLeft: 'auto'}}>
+            <Picker
+              onValueChange={setMode}
+              mode="dropdown"
+              selectedValue={mode}>
+              <Picker.Item value="day" label="day" />
+              <Picker.Item value="3days" label="3days" />
+              <Picker.Item value="week" label="week" />
+              <Picker.Item value="month" label="month" />
+            </Picker>
+          </View>
+          <Button
+            onPress={() => navigation.navigate('Profile', {name: 'Jane'})}
+            title="Profile"
+          />
+        </>
+      ),
+    });
+  }, [navigation, mode]);
   return (
-    <View style={TemplateStyles.container}>
-      <Text>test</Text>
-      <Agenda
-        testID="test"
-        items={items}
-        loadItemsForMonth={loadItems}
-        markedDates={{}}
-        showOnlySelectedDayItems
-        onCalendarToggled={day => console.log(day, ' test')}
-        onDayChange={day => console.log(day, ' test')}
-        renderItem={renderItem}
-        renderEmptyDate={renderEmptyDate}
-        rowHasChanged={rowHasChanged}
-        showClosingKnob={true}
-      />
-      <Button
-        title="Go to Jane's profile"
-        onPress={() => navigation.navigate('Profile', {name: 'Jane'})}
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <View style={{height: 100, borderBottomWidth: 0.5}}>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+            <Button title="Today" onPress={_onToday} />
+            <Button title=" < " onPress={_onPrevDate} />
+            <View style={{marginLeft: 16, width: '60%'}}>
+              <Text>{dayjs(date).format('DD MMMM YYYY')}</Text>
+            </View>
+
+            <Button title=" > " onPress={_onNextDate} />
+          </View>
+        </View>
+        <Calendar
+          date={date}
+          theme={darkTheme}
+          events={events}
+          height={600}
+          mode={mode}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
-const styles = StyleSheet.create({
-  item: {
-    backgroundColor: 'white',
-    flex: 1,
-    borderRadius: 5,
-    padding: 10,
-    marginRight: 10,
-    marginTop: 17,
-  },
-  emptyDate: {
-    height: 15,
-    flex: 1,
-    paddingTop: 30,
-  },
-});
 
 export default HomeScreen;
